@@ -1,102 +1,180 @@
-import Image from "next/image";
+"use client";
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import SignIn from '@/components/signIn';
+import { SignUp } from '@/components/signUp'; // Assuming you have these components
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [isSignInOpen, setIsSignInOpen] = useState(false);
+  const [isSignUpOpen, setIsSignUpOpen] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
+      {/* Hero Section */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="py-20 text-center"
+      >
+        <h1 className="text-6xl font-bold text-gray-900 mb-4">
+          Your Music Stats, Simplified
+        </h1>
+        <p className="text-xl text-gray-600 mb-8">
+          Track your Spotify listening habits and discover your top artists, tracks, and more.
+        </p>
+        <div className="space-x-4">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">Sign In</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Sign In</DialogTitle>
+                <DialogDescription>
+                  Enter your credentials to sign in.
+                </DialogDescription>
+              </DialogHeader>
+              <SignIn />
+              <DialogFooter>
+                <Button onClick={() => setIsSignInOpen(false)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">Sign Up</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Sign Up</DialogTitle>
+                <DialogDescription>
+                  Create a new account to get started.
+                </DialogDescription>
+              </DialogHeader>
+              <SignUp />
+              <DialogFooter>
+                <Button onClick={() => setIsSignUpOpen(false)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+      </motion.div>
+
+      {/* Features Section */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        className="py-16 bg-white"
+      >
+        <div className="container mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center text-gray-900 mb-12">
+            Features
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                title: 'Top Artists',
+                description: 'Discover your most-listened-to artists over time.',
+                icon: '🎤',
+              },
+              {
+                title: 'Top Tracks',
+                description: 'See your favorite tracks and how often you play them.',
+                icon: '🎵',
+              },
+              {
+                title: 'Personalized Stats',
+                description: 'Get insights into your listening habits and trends.',
+                icon: '📊',
+              },
+            ].map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: index * 0.2 }}
+              >
+                <Card className="h-full">
+                  <CardHeader>
+                    <CardTitle className="text-2xl flex items-center gap-2">
+                      <span>{feature.icon}</span>
+                      {feature.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-600">{feature.description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </motion.div>
+
+      {/* CTA Section */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+        className="py-20 text-center bg-gray-900 text-white"
+      >
+        <h2 className="text-4xl font-bold mb-4">
+          Ready to Dive In?
+        </h2>
+        <p className="text-xl mb-8">
+          Sign up now to start exploring your music stats.
+        </p>
+        <div className="space-x-4">
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">Sign In</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Sign In</DialogTitle>
+                <DialogDescription>
+                  Enter your credentials to sign in.
+                </DialogDescription>
+              </DialogHeader>
+              <SignIn />
+              <DialogFooter>
+                <Button onClick={() => setIsSignInOpen(false)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline">Sign Up</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Sign Up</DialogTitle>
+                <DialogDescription>
+                  Create a new account to get started.
+                </DialogDescription>
+              </DialogHeader>
+              <SignUp />
+              <DialogFooter>
+                <Button onClick={() => setIsSignUpOpen(false)}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </motion.div>
+
+      {/* Footer */}
+      <footer className="py-8 text-center bg-gray-800 text-white">
+        <p className="text-sm">
+          © Made for Modern Web Development Module: Marcus, Kay, Pedro and Dami</p>
+        <div className="mt-4 space-x-4">
+          <a href="#" className="text-sm hover:underline">Terms</a>
+          <a href="#" className="text-sm hover:underline">Privacy</a>
+        </div>
       </footer>
     </div>
   );
