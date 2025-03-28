@@ -1,12 +1,23 @@
 "use client"; 
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-
+import { useEffect } from 'react';
 export default function Home() {
   const handleLogin = () => {
     // Redirect to your Flask backend's /login endpoint
-    window.location.href = 'http://localhost:5000/login';
+    window.location.replace('http://localhost:5000/login');
   };
+  useEffect(() => {
+    // Extract token from URL fragment
+    const hash = window.location.hash.substring(1)
+    const params = new URLSearchParams(hash)
+    const token = params.get('token')
+  
+    if (token) {
+      sessionStorage.setItem('access_token', token)
+      window.history.replaceState(null, '', '/dashboard')
+    }
+  }, [])
 
   return (
     <motion.div

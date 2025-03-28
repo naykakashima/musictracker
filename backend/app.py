@@ -7,9 +7,9 @@ from dotenv import load_dotenv
 from urllib.parse import urlencode
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-
+from flask_cors import CORS
 import time
-
+from datetime import timedelta
 db = SQLAlchemy()
 api = Api()
 
@@ -20,6 +20,28 @@ def create_app():
     app = Flask(__name__)
     app.secret_key = os.getenv('SECRET_KEY')
     
+    # Enhanced CORS configuration
+    CORS(app, 
+        supports_credentials=True,
+        resources={
+            r"/*": {
+                "origins": ["http://localhost:3001"],
+                "methods": ["GET", "POST", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"]
+            }
+        }
+    )
+
+    # Secure session configuration
+    app.config.update(
+        SESSION_COOKIE_NAME='spotify_session',
+        SESSION_COOKIE_SAMESITE='None',
+        SESSION_COOKIE_SECURE=True,  # Must be True for SameSite=None
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_DOMAIN='localhost',
+        PERMANENT_SESSION_LIFETIME=timedelta(hours=1),
+        SESSION_REFRESH_EACH_REQUEST=True
+    )
     # Configure DB
     app.config['SQLALCHEMY_DATABASE_URI'] = (
         f"postgresql://{os.getenv('DB_USER')}:{os.getenv('DB_PASSWORD')}"
@@ -73,9 +95,18 @@ def login():
         'client_id': CLIENT_ID,
         'redirect_uri': REDIRECT_URI,
         'scope': 'user-read-private user-read-email user-library-read user-top-read user-read-recently-played',
+        'show_dialog': 'true'  # Forces fresh auth and cookie acceptance
+    } 
+    #add cors headers
+    headers = {
+        'Access-Control-Allow-Origin': 'http://localhost:3001',
+        'Access-Control-Allow-Credentials': 'true'
     }
-    return redirect(f"https://accounts.spotify.com/authorize?{urlencode(params)}")
-
+    # Redirect to Spotify authorization page
+    # Add CORS headers to the response
+    response = redirect(f"https://accounts.spotify.com/authorize?{urlencode(params)}")
+    response.headers.update(headers)
+    return response
 @app.route('/callback')
 def callback():
     # Existing token retrieval code
@@ -92,7 +123,9 @@ def callback():
     )
     token_response_data = token_response.json()
     access_token = token_response_data.get('access_token')
-    print(token_response_data)  # Debug
+    session['access_token'] = access_token
+    print(session['access_token'])  # Debug
+    session['refresh_token'] = token_response_data.get('refresh_token')
     # Get user profile from Spotify
     headers = {'Authorization': f'Bearer {access_token}'}
     profile_response = requests.get('https://api.spotify.com/v1/me', headers=headers)
@@ -127,16 +160,49 @@ def callback():
             # Store in session
             session['user_id'] = user.id
             session['is_admin'] = user.is_admin  # Commit changes to the database
+            print(f"User {user.display_name} logged in")
+            print(session)
 
         except Exception as e:
             db.session.rollback()  # Rollback any changes on error
             print(f"Database error: {str(e)}")
             return "Database error", 500    
-    return redirect('http://localhost:3001/dashboard')
+    # Enhanced session handling
+    session.permanent = True
+    session.update(
+        access_token=access_token,
+        refresh_token=token_response_data.get('refresh_token'),
+        user_id=profile_data['id'],
+        is_admin=user.is_admin if user else False
+    )
+
+    # Create proper redirect response
+    frontend_url = f"http://localhost:3001/dashboard"
+    response = redirect(frontend_url, code=303)
+    
+    # Set cross-origin cookies
+    response.set_cookie(
+        'spotify_session',
+        value=session['user_id'],
+        secure=True,
+        samesite='None',
+        domain='localhost',
+        httponly=True,
+        max_age=3600
+    )
+    
+    response.headers.extend({
+        'Access-Control-Allow-Origin': 'http://localhost:3001',
+        'Access-Control-Allow-Credentials': 'true',
+        'Access-Control-Expose-Headers': 'Set-Cookie'
+    })
+    
+    return response
 
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
+        print(session)
         return redirect(url_for('login'))
     
     # Get user data from database
@@ -159,7 +225,8 @@ def dashboard():
 def get_user_genres():
     # Verify authentication
     if 'user_id' not in session:
-        return jsonify({'error': 'Unauthorized'}), 401
+        print(session)
+        return {'error': 'User not authenticated'}, 401
     
     # Get top artists from Spotify
     headers = {'Authorization': f'Bearer {session["access_token"]}'}
@@ -179,6 +246,14 @@ def get_user_genres():
     
     # Return top 10 genres
     return jsonify(dict(genre_counter.most_common(10)))
+@app.before_request
+def check_session():
+    if request.endpoint in ['login', 'callback']:
+        return
+        
+    if 'user_id' not in session:
+        print(f"Session invalid: {dict(session)}")
+        return jsonify({'error': 'Session expired'}), 401
 @app.teardown_appcontext
 def shutdown_session(exception=None):
     db.session.remove()  # Properly close sessions

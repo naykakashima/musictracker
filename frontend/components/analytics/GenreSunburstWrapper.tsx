@@ -1,16 +1,26 @@
 'use client';
 import useSWR from 'swr';
 import { GenreSunburst } from './GenreSunburst';
-import { Spinner } from '@/components/ui/spinner';
+
 
 export function GenreSunburstWrapper() {
   const { data, error, isLoading } = useSWR('/api/user/genres', async (url) => {
-    const res = await fetch(`http://localhost:5000${url}`);
-    return await res.json();
+    const res = await fetch(`/api/proxy`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            endpoint: url,
+            method: 'GET',
+            }),
+    });
+    return res;
   });
-
-  if (isLoading) return <Spinner />;
-  if (error) return <div>Error loading genres</div>;
+  if (error) {
+    console.error('Error fetching genre data:', error);
+    return <div>Error loading genre data</div>;
+  } 
 
   // Transform API response to expected format
   const sunburstData = {
