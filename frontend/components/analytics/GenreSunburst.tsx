@@ -4,7 +4,7 @@ import { ParentSize } from '@visx/responsive';
 import { hierarchy, partition } from 'd3-hierarchy';
 import { Group } from '@visx/group';
 import { scaleOrdinal } from '@visx/scale';
-import { Arc } from '@visx/shape';
+import * as d3 from 'd3-shape'; 
 import { useMemo } from 'react';
 import { SunburstData, GenreData } from '@/types/genres';
 /**
@@ -51,29 +51,31 @@ involving the data provided to the `GenreSunburst` component. */
     <ParentSize>
       {({ width, height }) => {
         const radius = Math.min(width, height) / 2;
-        
+  
         return (
           <svg width={width} height={height} className="overflow-visible">
             <Group top={height / 2} left={width / 2}>
               {root.descendants().map((node, i) => {
-                const arcGenerator = Arc({
-                  innerRadius: node.depth * radius / 3,
-                  startAngle: node.x0 || 0,
-                  endAngle: node.x1 || 0,
-                  padAngle: 0.02
-                });
-
+                // Use d3.arc() to create an arc generator
+                const arcGenerator = d3.arc();
+  
                 const centerAngle = node.x0 + (node.x1 - node.x0) / 2;
                 const labelRadius = (node.depth + 0.5) * radius / 3;
                 const [labelX, labelY] = [
                   Math.sin(centerAngle) * labelRadius,
                   -Math.cos(centerAngle) * labelRadius,
                 ];
-
+  
                 return (
                   <g key={`arc-${i}`}>
                     <path
-                      d={arcGenerator() || ''}
+                      d={arcGenerator({
+                        innerRadius: (node.depth * radius) / 3,
+                        outerRadius: ((node.depth + 1) * radius) / 3,
+                        startAngle: node.x0 || 0,
+                        endAngle: node.x1 || 0,
+                        padAngle: 0.02,
+                      }) || ''} // Generate the arc path
                       fill={colorScale(node.data.name)}
                       stroke="#fff"
                       strokeWidth={0.5}
