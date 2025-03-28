@@ -3,3 +3,6 @@ Flask-RESTful
 python-dotenv
 requests
 pythonpy
+psycopg2-binary 
+sqlalchemy 
+flask-sqlalchemy

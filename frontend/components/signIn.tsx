@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -79,7 +79,12 @@ export default function SignIn() {
               className="w-full"
               disabled={loading}
               onClick={async () => {
-                await signIn.email({ email, password });
+                setLoading(true);
+                try {
+                  await signIn.email({ email, password });
+                } finally {
+                  setLoading(false);
+                }
               }}
             >
               {loading ? (

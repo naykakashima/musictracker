@@ -4,9 +4,9 @@ const { Pool } = pg; // Destructure the Client object from the pg package
  
 const pool = new Pool({
   user: 'postgres',
-  password: process.env.PG_PASSWORD,
-  host: 'api.aspekts.dev',
-  port: 5334,
+  password: "admin",
+  host: 'v2.aspekts.dev',
+  port: 5432,
   database: 'musictracker',
 });
 export const auth = betterAuth({
