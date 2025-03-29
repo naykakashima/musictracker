@@ -1,10 +1,12 @@
 "use client";
 import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import Image from 'next/image';
 import { motion } from 'framer-motion';
-import { ExternalLink, Play } from 'lucide-react';
+import { ExternalLink, Play, RefreshCw } from 'lucide-react';
+import { proxyFetcher } from '@/lib/utils';
 
 interface Track {
   id: string;
@@ -35,37 +37,33 @@ export default function TopTracks({
   timeRange?: 'short_term' | 'medium_term' | 'long_term',
   compact?: boolean
 }) {
-  const [tracks, setTracks] = useState<Track[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  // State to track if we need to use direct URL
+  const [isFirstAttempt, setIsFirstAttempt] = useState(true);
+  const [endpoint, setEndpoint] = useState(`http://localhost:5000/api/user/tracks?time_range=${timeRange}`);
 
-  useEffect(() => {
-    const fetchTopTracks = async () => {
-      setLoading(true);
-      try {
-        // Add the time_range parameter to the URL
-        const response = await fetch(`http://localhost:5000/api/user/tracks?time_range=${timeRange}`, {
-          credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Failed to fetch top tracks: ${response.status}`);
+  // Use SWR for data fetching
+  const { data, error, isLoading, mutate } = useSWR<SpotifyResponse>(
+    endpoint,
+    proxyFetcher,
+    {
+      onError: (err) => {
+        // If this is the first attempt and it failed, try direct URL
+        if (isFirstAttempt) {
+          console.log('Error fetching track data, retrying...', err);
+          setIsFirstAttempt(false);
+          // This prevents infinite retry loops
+          setTimeout(() => mutate(), 1000);
         }
-        
-        const data: SpotifyResponse = await response.json();
-        setTracks(data.items || []);
-      } catch (err) {
-        console.error('Error fetching top tracks:', err);
-        setError(err instanceof Error ? err.message : 'Failed to load top tracks');
-      } finally {
-        setLoading(false);
-      }
-    };
+      },
+      revalidateOnFocus: false,
+      dedupingInterval: 60000, // 1 minute
+      refreshInterval: 0, // Don't auto-refresh
+    }
+  );
 
-    fetchTopTracks();
+  // Update the endpoint when the time range changes
+  useEffect(() => {
+    setEndpoint(`http://localhost:5000/api/user/tracks?time_range=${timeRange}`);
   }, [timeRange]);
 
   const formatDuration = (ms: number) => {
@@ -89,31 +87,10 @@ export default function TopTracks({
     show: { opacity: 1, y: 0 }
   };
 
-  if (error) {
-    return (
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Top Tracks</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center p-4">
-            <div className="text-red-500 mb-2">Error: {error}</div>
-            <button 
-              onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-            >
-              Retry
-            </button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Extract the track list content into a separate component
   const TrackList = () => (
     <div className={compact ? 'p-0' : undefined}>
-      {loading ? (
+      {isLoading ? (
         <div className="space-y-4">
           {/* Show fewer skeletons in compact mode */}
           {Array(compact ? 3 : 5).fill(0).map((_, i) => (
@@ -126,6 +103,16 @@ export default function TopTracks({
             </div>
           ))}
         </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center p-4">
+          <div className="text-red-500 mb-2">Error loading tracks</div>
+          <button 
+            onClick={() => mutate()}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition flex items-center gap-2"
+          >
+            <RefreshCw className="h-4 w-4" /> Retry
+          </button>
+        </div>
       ) : (
         <motion.div 
           className="space-y-3"
@@ -133,13 +120,13 @@ export default function TopTracks({
           initial="hidden"
           animate="show"
         >
-          {tracks.length === 0 ? (
+          {!data?.items || data.items.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No tracks available for this time period
             </div>
           ) : (
             // Show only 5 tracks in compact mode
-            tracks.slice(0, compact ? 5 : undefined).map((track, index) => (
+            data.items.slice(0, compact ? 5 : undefined).map((track, index) => (
               <motion.div 
                 key={track.id} 
                 className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-100 transition-colors group"
@@ -208,15 +195,24 @@ export default function TopTracks({
         <div className="text-xs text-gray-500">
           Based on your Spotify listening history
         </div>
-        <a 
-          href="https://open.spotify.com/collection/tracks" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="flex items-center text-sm text-green-600 hover:text-green-700 font-medium"
-        >
-          Open in Spotify
-          <ExternalLink className="ml-1 h-3 w-3" />
-        </a>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => mutate()} 
+            className="text-gray-500 hover:text-gray-700 transition"
+            aria-label="Refresh data"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+          <a 
+            href="https://open.spotify.com/collection/tracks" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="flex items-center text-sm text-green-600 hover:text-green-700 font-medium"
+          >
+            Open in Spotify
+            <ExternalLink className="ml-1 h-3 w-3" />
+          </a>
+        </div>
       </CardFooter>
     </Card>
   );

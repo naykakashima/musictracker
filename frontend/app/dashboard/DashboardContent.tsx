@@ -4,20 +4,23 @@ import { useState } from 'react'
 import { useSession } from '@/lib/useSession'
 import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { useAudioFeaturesStats, useGenreStats, useLibraryStats } from "@/lib/stats"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { GenreSunburstWrapper } from '@/components/analytics/GenreSunburstWrapper'
 import TopTracks from '@/components/TopTracks'
 import TopArtists from '@/components/TopArtists'
 import { TimeRangeSelector } from '@/components/TimeRangeSelector'
 import { motion } from 'framer-motion'
-import { Music, PieChart, BarChart3, Clock, User } from 'lucide-react'
+import { Music, PieChart, BarChart3, Library, User, Radio } from 'lucide-react'
 
 type TimeRange = 'short_term' | 'medium_term' | 'long_term'
 
 export function DashboardContent() {
   const { session, loading } = useSession()
   const [timeRange, setTimeRange] = useState<TimeRange>('medium_term')
-
+  const { primaryFeature, isLoading: loadingAudioFeatures } = useAudioFeaturesStats(timeRange)
+  const { topGenre, isLoading: loadingGenres } = useGenreStats(timeRange)
+  const { savedTracks, isLoading: loadingLibrary } = useLibraryStats()
   if (loading) {
     return (
       <motion.div 
@@ -111,6 +114,7 @@ export function DashboardContent() {
         <TabsContent value="overview" className="space-y-6 mt-6">
           {/* Summary Cards Row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* First Card: Audio Features */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -118,21 +122,43 @@ export function DashboardContent() {
             >
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-medium">Listening Activity</CardTitle>
-                  <Clock className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Sound Profile</CardTitle>
+                  <Radio className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
-                    {/* This would connect to backend data */}
-                    428 tracks
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    listened in the last {timeRange === 'short_term' ? '4 weeks' : timeRange === 'medium_term' ? '6 months' : 'few years'}
-                  </p>
+                  {loadingAudioFeatures ? (
+                    <div className="flex flex-col space-y-2">
+                      <div className="h-8 w-24 bg-gray-200 animate-pulse rounded" />
+                      <div className="h-4 w-36 bg-gray-100 animate-pulse rounded" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold capitalize">
+                        {primaryFeature.feature === 'danceability' ? 'Danceable' : 
+                         primaryFeature.feature === 'energy' ? 'Energetic' : 
+                         primaryFeature.feature === 'acousticness' ? 'Acoustic' : 'Balanced'}
+                      </div>
+                      <div className="flex items-center mt-1">
+                        <div className="bg-gray-200 h-1.5 flex-grow rounded-full overflow-hidden">
+                          <div 
+                            className="bg-primary h-full rounded-full"
+                            style={{ width: `${primaryFeature.value * 100}%` }}
+                          />
+                        </div>
+                        <span className="text-xs text-muted-foreground ml-2">
+                          {Math.round(primaryFeature.value * 100)}%
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        based on audio feature analysis
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
             
+            {/* Second Card: Top Genre */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -144,17 +170,26 @@ export function DashboardContent() {
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold capitalize">
-                    {/* This would connect to your genre data */}
-                    Pop
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    based on your top artists
-                  </p>
+                  {loadingGenres ? (
+                    <div className="flex flex-col space-y-2">
+                      <div className="h-8 w-24 bg-gray-200 animate-pulse rounded" />
+                      <div className="h-4 w-36 bg-gray-100 animate-pulse rounded" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold capitalize">
+                        {topGenre}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        based on your top artists
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
             
+            {/* Third Card: Library Stats */}
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -162,79 +197,104 @@ export function DashboardContent() {
             >
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-                  <CardTitle className="text-sm font-medium">Mood</CardTitle>
-                  <Music className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Your Library</CardTitle>
+                  <Library className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">
-                    {/* This would connect to audio features data */}
-                    Energetic
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    based on audio features analysis
-                  </p>
+                  {loadingLibrary ? (
+                    <div className="flex flex-col space-y-2">
+                      <div className="h-8 w-24 bg-gray-200 animate-pulse rounded" />
+                      <div className="h-4 w-36 bg-gray-100 animate-pulse rounded" />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-2xl font-bold">
+                        {savedTracks.toLocaleString()}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        tracks saved in your library
+                      </p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
           </div>
 
           {/* Main Content Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Genre Visualization */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              <Card className="overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-indigo-500/10 to-violet-500/10">
-                  <CardTitle>Your Genre Profile</CardTitle>
-                  <CardDescription>
-                    Visualization of your listening habits by genre
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-0 h-[400px]">
-                  <GenreSunburstWrapper />
-                </CardContent>
-              </Card>
-            </motion.div>
+                <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.6 }}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+      >
+        {/* Genre Visualization */}
+        <Card className="overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-indigo-500/10 to-violet-500/10">
+            <CardTitle>Your Genre Profile</CardTitle>
+            <CardDescription>
+              Visualization of your listening habits by genre
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0 h-[400px]">
+            <GenreSunburstWrapper />
+          </CardContent>
+        </Card>
 
-            {/* Top Tracks Preview */}
-            <motion.div
-              initial={{ y: 20, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              transition={{ delay: 0.6 }}
+      {/* Top Tracks Preview */}
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-blue-500/10 to-sky-500/10">
+          <div className="flex justify-between">
+            <div>
+              <CardTitle>Top Tracks</CardTitle>
+              <CardDescription>
+                Your most played songs
+              </CardDescription>
+            </div>
+            <a 
+              href="#tracks" 
+              onClick={(e) => {
+                e.preventDefault();
+                (document.querySelector('[data-value="tracks"]') as HTMLElement)?.click();
+              }}
+              className="text-sm text-primary hover:underline"
             >
-              <Card className="overflow-hidden h-full flex flex-col">
-                <CardHeader className="bg-gradient-to-r from-blue-500/10 to-sky-500/10">
-                  <div className="flex justify-between">
-                    <div>
-                      <CardTitle>Top Tracks</CardTitle>
-                      <CardDescription>
-                        Your most played songs
-                      </CardDescription>
-                    </div>
-                    <a 
-                      href="#tracks" 
-                      onClick={(e) => {
-                        e.preventDefault();
-                        const tracksTab = document.querySelector('[data-value="tracks"]') as HTMLElement | null;
-                        tracksTab?.click();
-                      }}
-                      className="text-sm text-primary hover:underline"
-                    >
-                      View all
-                    </a>
-                  </div>
-                </CardHeader>
-                <CardContent className="p-0 flex-grow overflow-hidden">
-                  <div className="p-4 h-full overflow-y-auto">
-                    <TopTracks timeRange={timeRange} compact />
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
+              View all
+            </a>
           </div>
+        </CardHeader>
+        <CardContent className="p-4">
+          <TopTracks timeRange={timeRange} compact />
+        </CardContent>
+      </Card>
+
+  {/* Top Artists Preview */}
+  <Card className="overflow-hidden lg:col-span-2">
+    <CardHeader className="bg-gradient-to-r from-pink-500/10 to-purple-500/10">
+      <div className="flex justify-between">
+        <div>
+          <CardTitle>Top Artists</CardTitle>
+          <CardDescription>
+            Your most listened artists
+          </CardDescription>
+        </div>
+        <a 
+          href="#artists" 
+          onClick={(e) => {
+            e.preventDefault();
+            (document.querySelector('[data-value="artists"]') as HTMLElement)?.click();
+          }}
+          className="text-sm text-primary hover:underline"
+        >
+          View all
+        </a>
+      </div>
+    </CardHeader>
+    <CardContent className="p-4">
+      <TopArtists timeRange={timeRange} compact />
+    </CardContent>
+  </Card>
+</motion.div>
         </TabsContent>
 
         {/* Tracks Tab */}

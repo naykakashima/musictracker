@@ -516,165 +516,504 @@ def get_user_genres():
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
     
     return response
+@app.route('/api/user/tracks', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)
+def get_user_tracks():
+    """Direct Flask route for user's top tracks."""
+    # Handle CORS preflight requests
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    # Get user ID using the same fallback logic
+    current_user_id = get_jwt_identity()
+    
+    # If standard JWT identity extraction fails, try fallbacks
+    if not current_user_id:
+        jwt_token = request.cookies.get('access_token')
+        if jwt_token:
+            try:
+                from flask_jwt_extended import decode_token
+                decoded_token = decode_token(jwt_token)
+                if 'sub' in decoded_token:
+                    current_user_id = decoded_token['sub']
+            except Exception as e:
+                print(f"Error decoding JWT token: {str(e)}")
+                
+        # Check Authorization header
+        if not current_user_id:
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                jwt_token = auth_header[7:]
+                try:
+                    from flask_jwt_extended import decode_token
+                    decoded_token = decode_token(jwt_token)
+                    if 'sub' in decoded_token:
+                        current_user_id = decoded_token['sub']
+                except Exception as e:
+                    print(f"Error decoding JWT token from header: {str(e)}")
+    
+    # If still no user ID, return error
+    if not current_user_id:
+        print("Authentication failed, no user ID found.")
+        response = jsonify({
+            "error": "Authentication required",
+            "debug": {
+                "cookies": list(request.cookies.keys()),
+                "headers": {k: v for k, v in request.headers.items() if k.lower() in ['authorization', 'content-type', 'host']}
+            }
+        })
+        response.status_code = 401
+        # Add CORS headers to the error response too
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+        
+    # Get time range from query params, default to medium_term
+    time_range = request.args.get('time_range', 'medium_term')
+    # Validate time range
+    if time_range not in ['short_term', 'medium_term', 'long_term']:
+        time_range = 'medium_term'
+    
+    print(f"Fetching top tracks for user {current_user_id} with time_range={time_range}")
+        
+    # Use the helper function to make the request
+    data, error = spotify_api_request(
+        current_user_id,
+        'me/top/tracks',
+        {
+            'limit': 10,
+            'time_range': time_range
+        }
+    )
+    
+    if error:
+        print(f"Error fetching top tracks: {error}")
+        response = jsonify({"error": error})
+        response.status_code = 400
+        # Add CORS headers to the error response too
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+        
+    # Add CORS headers
+    response = jsonify(data)
+    print(f"Successfully fetched {len(data.get('items', []))} tracks")
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    
+    return response
+
+@app.route('/api/user/artists', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)
+def get_user_artists():
+    """Direct Flask route for user's top artists."""
+    # Handle CORS preflight requests
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    # Get user ID using the same fallback logic
+    current_user_id = get_jwt_identity()
+    
+    # If standard JWT identity extraction fails, try fallbacks
+    if not current_user_id:
+        jwt_token = request.cookies.get('access_token')
+        if jwt_token:
+            try:
+                from flask_jwt_extended import decode_token
+                decoded_token = decode_token(jwt_token)
+                if 'sub' in decoded_token:
+                    current_user_id = decoded_token['sub']
+            except Exception as e:
+                print(f"Error decoding JWT token: {str(e)}")
+                
+        # Check Authorization header
+        if not current_user_id:
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                jwt_token = auth_header[7:]
+                try:
+                    from flask_jwt_extended import decode_token
+                    decoded_token = decode_token(jwt_token)
+                    if 'sub' in decoded_token:
+                        current_user_id = decoded_token['sub']
+                except Exception as e:
+                    print(f"Error decoding JWT token from header: {str(e)}")
+    
+    # If still no user ID, return error
+    if not current_user_id:
+        print("Authentication failed, no user ID found.")
+        response = jsonify({
+            "error": "Authentication required",
+            "debug": {
+                "cookies": list(request.cookies.keys()),
+                "headers": {k: v for k, v in request.headers.items() if k.lower() in ['authorization', 'content-type', 'host']}
+            }
+        })
+        response.status_code = 401
+        # Add CORS headers to the error response too
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+        
+    # Get time range from query params, default to medium_term
+    time_range = request.args.get('time_range', 'medium_term')
+    # Validate time range
+    if time_range not in ['short_term', 'medium_term', 'long_term']:
+        time_range = 'medium_term'
+    
+    print(f"Fetching top artists for user {current_user_id} with time_range={time_range}")
+        
+    # Use the helper function to make the request
+    data, error = spotify_api_request(
+        current_user_id,
+        'me/top/artists',
+        {
+            'limit': 9,  # 3x3 grid in the frontend
+            'time_range': time_range
+        }
+    )
+    
+    if error:
+        print(f"Error fetching top artists: {error}")
+        response = jsonify({"error": error})
+        response.status_code = 400
+        # Add CORS headers to the error response too
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+        
+    # Add CORS headers
+    response = jsonify(data)
+    print(f"Successfully fetched {len(data.get('items', []))} artists")
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    
+    return response
+@app.route('/api/stats/audio-features', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)
+def get_audio_features_avg():
+    """Get average audio features for user's top tracks."""
+    # Handle CORS preflight requests
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    # Get user ID using the fallback logic
+    current_user_id = get_jwt_identity()
+    if not current_user_id:
+        jwt_token = request.cookies.get('access_token')
+        if jwt_token:
+            try:
+                from flask_jwt_extended import decode_token
+                decoded_token = decode_token(jwt_token)
+                if 'sub' in decoded_token:
+                    current_user_id = decoded_token['sub']
+            except Exception as e:
+                print(f"Error decoding JWT token: {str(e)}")
+                
+        # Check Authorization header
+        if not current_user_id:
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                jwt_token = auth_header[7:]
+                try:
+                    from flask_jwt_extended import decode_token
+                    decoded_token = decode_token(jwt_token)
+                    if 'sub' in decoded_token:
+                        current_user_id = decoded_token['sub']
+                except Exception as e:
+                    print(f"Error decoding JWT token from header: {str(e)}")
+    
+    # If still no user ID, return error
+    if not current_user_id:
+        response = jsonify({"error": "Authentication required"})
+        response.status_code = 401
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    # Get time range from query params
+    time_range = request.args.get('time_range', 'medium_term')
+    if time_range not in ['short_term', 'medium_term', 'long_term']:
+        time_range = 'medium_term'
+    
+    # First get top tracks
+    tracks_data, error = spotify_api_request(
+        current_user_id,
+        'me/top/tracks',
+        {
+            'limit': 20,  # Increased to get more accurate averages
+            'time_range': time_range
+        }
+    )
+    
+    if error:
+        response = jsonify({"error": error})
+        response.status_code = 400
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    # Extract track IDs
+    track_ids = [track['id'] for track in tracks_data.get('items', [])]
+    
+    if not track_ids:
+        response = jsonify({
+            "energy": 0,
+            "danceability": 0,
+            "valence": 0,
+            "acousticness": 0,
+            "instrumentalness": 0,
+            "liveness": 0,
+            "speechiness": 0,
+            "tempo": 0,
+            "track_count": 0
+        })
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    # Get audio features for these tracks
+    audio_features_data, error = spotify_api_request(
+        current_user_id,
+        'audio-features',
+        {
+            'ids': ','.join(track_ids[:20])  # Limited to 20 tracks
+        }
+    )
+    
+    if error:
+        response = jsonify({"error": error})
+        response.status_code = 400
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    # Calculate averages
+    features = audio_features_data.get('audio_features', [])
+    features = [f for f in features if f]  # Filter out None values
+    
+    if not features:
+        response = jsonify({
+            "energy": 0,
+            "danceability": 0,
+            "valence": 0,
+            "acousticness": 0,
+            "instrumentalness": 0,
+            "liveness": 0,
+            "speechiness": 0,
+            "tempo": 0,
+            "track_count": 0
+        })
+    else:
+        avg_features = {
+            "energy": sum(f.get('energy', 0) for f in features) / len(features),
+            "danceability": sum(f.get('danceability', 0) for f in features) / len(features),
+            "valence": sum(f.get('valence', 0) for f in features) / len(features),
+            "acousticness": sum(f.get('acousticness', 0) for f in features) / len(features),
+            "instrumentalness": sum(f.get('instrumentalness', 0) for f in features) / len(features),
+            "liveness": sum(f.get('liveness', 0) for f in features) / len(features),
+            "speechiness": sum(f.get('speechiness', 0) for f in features) / len(features),
+            "tempo": sum(f.get('tempo', 0) for f in features) / len(features),
+            "track_count": len(features)
+        }
+        response = jsonify(avg_features)
+    
+    # Add CORS headers
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    
+    return response
+@app.route('/api/stats/genres', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)
+def get_top_genres():
+    """Get user's top genres based on their top artists."""
+    # Handle CORS preflight requests
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    
+    # Get user ID using the same fallback logic
+    current_user_id = get_jwt_identity()
+    
+    # If standard JWT identity extraction fails, try fallbacks
+    if not current_user_id:
+        jwt_token = request.cookies.get('access_token')
+        if jwt_token:
+            try:
+                from flask_jwt_extended import decode_token
+                decoded_token = decode_token(jwt_token)
+                if 'sub' in decoded_token:
+                    current_user_id = decoded_token['sub']
+            except Exception as e:
+                print(f"Error decoding JWT token: {str(e)}")
+                
+        # Check Authorization header
+        if not current_user_id:
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                jwt_token = auth_header[7:]
+                try:
+                    from flask_jwt_extended import decode_token
+                    decoded_token = decode_token(jwt_token)
+                    if 'sub' in decoded_token:
+                        current_user_id = decoded_token['sub']
+                except Exception as e:
+                    print(f"Error decoding JWT token from header: {str(e)}")
+    
+    # Get time range from query params
+    time_range = request.args.get('time_range', 'medium_term')
+    if time_range not in ['short_term', 'medium_term', 'long_term']:
+        time_range = 'medium_term'
+    
+    # Get top artists
+    artists_data, error = spotify_api_request(
+        current_user_id,
+        'me/top/artists',
+        {
+            'limit': 30,  # Increased to get more genre diversity
+            'time_range': time_range
+        }
+    )
+    
+    if error:
+        response = jsonify({"error": error})
+        response.status_code = 400
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    # Extract genres and count occurrences
+    genre_count = {}
+    
+    for artist in artists_data.get('items', []):
+        for genre in artist.get('genres', []):
+            genre_count[genre] = genre_count.get(genre, 0) + 1
+    
+    # Sort genres by occurrence count
+    sorted_genres = [{"name": k, "count": v} for k, v in 
+                     sorted(genre_count.items(), key=lambda x: x[1], reverse=True)]
+    
+    response = jsonify({
+        "genres": sorted_genres[:10],  # Top 10 genres
+        "top_genre": sorted_genres[0]["name"] if sorted_genres else "Unknown"
+    })
+    
+    # Add CORS headers
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    return response
+@app.route('/api/stats/library', methods=['GET', 'OPTIONS'])
+@jwt_required(optional=True)
+def get_saved_tracks_count():
+    """Get count of user's saved tracks."""
+    # Handle CORS preflight requests
+    if request.method == 'OPTIONS':
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    current_user_id = get_jwt_identity()
+    
+    # If standard JWT identity extraction fails, try fallbacks
+    if not current_user_id:
+        jwt_token = request.cookies.get('access_token')
+        if jwt_token:
+            try:
+                from flask_jwt_extended import decode_token
+                decoded_token = decode_token(jwt_token)
+                if 'sub' in decoded_token:
+                    current_user_id = decoded_token['sub']
+            except Exception as e:
+                print(f"Error decoding JWT token: {str(e)}")
+                
+        # Check Authorization header
+        if not current_user_id:
+            auth_header = request.headers.get('Authorization')
+            if auth_header and auth_header.startswith('Bearer '):
+                jwt_token = auth_header[7:]
+                try:
+                    from flask_jwt_extended import decode_token
+                    decoded_token = decode_token(jwt_token)
+                    if 'sub' in decoded_token:
+                        current_user_id = decoded_token['sub']
+                except Exception as e:
+                    print(f"Error decoding JWT token from header: {str(e)}")
+    
+    # Get saved tracks with limit=1 to minimize data transfer (we just need the total)
+    saved_tracks_data, error = spotify_api_request(
+        current_user_id,
+        'me/tracks',
+        {
+            'limit': 1
+        }
+    )
+    
+    if error:
+        response = jsonify({"error": error})
+        response.status_code = 400
+        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        return response
+    
+    # Extract total count
+    total_saved = saved_tracks_data.get('total', 0)
+    
+    # Get recently played tracks count too
+    recent_tracks_data, error = spotify_api_request(
+        current_user_id,
+        'me/player/recently-played',
+        {
+            'limit': 50  # Maximum allowed
+        }
+    )
+    
+    recent_count = len(recent_tracks_data.get('items', [])) if not error else 0
+    
+    response = jsonify({
+        "saved_tracks": total_saved,
+        "recently_played": recent_count
+    })
+    
+    # Add CORS headers
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    return response
 @app.teardown_appcontext
 def shutdown_session(exception=None):
     db.session.remove()  # Properly close sessions
-# API Resources
-class SpotifyData(Resource):
-    """Base class for Spotify data endpoints"""
-    @jwt_required(optional=True)
-    def check_auth(self):
-        current_user_id = get_jwt_identity()
-        if not current_user_id:
-            return jsonify({"error": "Authentication required"}), 401
-        return None
-# Fix the TopTracks API Resource class
-class TopTracks(SpotifyData):
-    def get(self):
-        # Get user ID using the same fallback logic as in other routes
-        current_user_id = get_jwt_identity()
-        
-        # If standard JWT identity extraction fails, try fallbacks
-        if not current_user_id:
-            jwt_token = request.cookies.get('access_token')
-            if jwt_token:
-                try:
-                    from flask_jwt_extended import decode_token
-                    decoded_token = decode_token(jwt_token)
-                    if 'sub' in decoded_token:
-                        current_user_id = decoded_token['sub']
-                except Exception as e:
-                    print(f"Error decoding JWT token: {str(e)}")
-                    
-            # Check Authorization header
-            if not current_user_id:
-                auth_header = request.headers.get('Authorization')
-                if auth_header and auth_header.startswith('Bearer '):
-                    jwt_token = auth_header[7:]
-                    try:
-                        from flask_jwt_extended import decode_token
-                        decoded_token = decode_token(jwt_token)
-                        if 'sub' in decoded_token:
-                            current_user_id = decoded_token['sub']
-                    except Exception as e:
-                        print(f"Error decoding JWT token from header: {str(e)}")
-        
-        # If still no user ID, return error
-        if not current_user_id:
-            return {
-                "error": "Authentication required",
-                "debug": {
-                    "cookies": list(request.cookies.keys()),
-                    "headers": {k: v for k, v in request.headers.items() if k.lower() in ['authorization', 'content-type', 'host']}
-                }
-            }, 401
-            
-        # Get time range from query params, default to medium_term
-        time_range = request.args.get('time_range', 'medium_term')
-        # Validate time range
-        if time_range not in ['short_term', 'medium_term', 'long_term']:
-            time_range = 'medium_term'
-            
-        # Use the helper function to make the request
-        data, error = spotify_api_request(
-            current_user_id,
-            'me/top/tracks',
-            {
-                'limit': 10,
-                'time_range': time_range
-            }
-        )
-        
-        if error:
-            return {"error": error}, 400
-            
-        # Add CORS headers
-        response = jsonify(data)
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        
-        return response
 
-# Fix the TopArtists API Resource class
-class TopArtists(SpotifyData):
-    def get(self):
-        # Get user ID using the same fallback logic as in other routes
-        current_user_id = get_jwt_identity()
-        
-        # If standard JWT identity extraction fails, try fallbacks
-        if not current_user_id:
-            jwt_token = request.cookies.get('access_token')
-            if jwt_token:
-                try:
-                    from flask_jwt_extended import decode_token
-                    decoded_token = decode_token(jwt_token)
-                    if 'sub' in decoded_token:
-                        current_user_id = decoded_token['sub']
-                except Exception as e:
-                    print(f"Error decoding JWT token: {str(e)}")
-                    
-            # Check Authorization header
-            if not current_user_id:
-                auth_header = request.headers.get('Authorization')
-                if auth_header and auth_header.startswith('Bearer '):
-                    jwt_token = auth_header[7:]
-                    try:
-                        from flask_jwt_extended import decode_token
-                        decoded_token = decode_token(jwt_token)
-                        if 'sub' in decoded_token:
-                            current_user_id = decoded_token['sub']
-                    except Exception as e:
-                        print(f"Error decoding JWT token from header: {str(e)}")
-        
-        # If still no user ID, return error
-        if not current_user_id:
-            return {
-                "error": "Authentication required",
-                "debug": {
-                    "cookies": list(request.cookies.keys()),
-                    "headers": {k: v for k, v in request.headers.items() if k.lower() in ['authorization', 'content-type', 'host']}
-                }
-            }, 401
-            
-        # Get time range from query params, default to medium_term
-        time_range = request.args.get('time_range', 'medium_term')
-        # Validate time range
-        if time_range not in ['short_term', 'medium_term', 'long_term']:
-            time_range = 'medium_term'
-            
-        # Use the helper function to make the request
-        data, error = spotify_api_request(
-            current_user_id,
-            'me/top/artists',
-            {
-                'limit': 9,  # 3x3 grid in the frontend
-                'time_range': time_range
-            }
-        )
-        
-        if error:
-            return {"error": error}, 400
-            
-        # Add CORS headers
-        response = jsonify(data)
-        response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
-        response.headers.add('Access-Control-Allow-Credentials', 'true')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        
-        return response
-
-class RecentlyPlayed(SpotifyData):
-    def get(self):
-        if (auth_check := self.check_auth()):
-            return auth_check
-        return spotify_api_request('me/player/recently-played', {'limit': 5})
-
-# Register routes
-api.add_resource(TopTracks, '/api/user/tracks')
-api.add_resource(TopArtists, '/api/user/artists')
-api.add_resource(RecentlyPlayed, '/api/user/recent')
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)  # Changed host to 0.0.0.0 for network access
