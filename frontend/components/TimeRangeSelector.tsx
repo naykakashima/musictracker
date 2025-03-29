@@ -1,5 +1,4 @@
 "use client";
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 
 type TimeRange = 'short_term' | 'medium_term' | 'long_term';

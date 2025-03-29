@@ -6,7 +6,7 @@ import { Spinner } from '@/components/ui/spinner'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useAudioFeaturesStats, useGenreStats, useLibraryStats } from "@/lib/stats"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { GenreSunburstWrapper } from '@/components/analytics/GenreSunburstWrapper'
+import { GenreSunburstWrapper } from '@/components/GenreSunburstWrapper'
 import TopTracks from '@/components/TopTracks'
 import TopArtists from '@/components/TopArtists'
 import { TimeRangeSelector } from '@/components/TimeRangeSelector'

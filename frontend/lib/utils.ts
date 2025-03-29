@@ -1,12 +1,22 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { SunburstData } from "@/types/genres"
-import { getCookie } from './cookie';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
-
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') {
+    return null; // Not in browser
+  }
+  
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) {
+    return parts.pop()?.split(';').shift() || null;
+  }
+  return null;
+}
 /**
  * Improved proxyFetcher that handles missing tokens and uses proper proxying
  * to avoid CORS issues

@@ -82,7 +82,14 @@ REDIRECT_URI = os.getenv('REDIRECT_URI')
 # Authentication routes
 @app.route('/login')
 def login():
-    """Initiate Spotify OAuth flow"""
+    """
+    The `login` function initiates the Spotify OAuth flow by generating a CSRF protection state value,
+    setting necessary parameters, redirecting to the Spotify authorization page, and setting a cookie
+    with the state value.
+    :return: A response object is being returned, which is a redirect to the Spotify authorization page
+    with the specified parameters for the OAuth flow. Additionally, a cookie named 'spotify_auth_state'
+    is being set with the generated state value for CSRF protection.
+"""
     # Generate a state value for CSRF protection
     state = secrets.token_hex(16)
     
@@ -110,8 +117,18 @@ def login():
     return response
 
 @app.route('/callback')
+
 def callback():
-    """Handle Spotify OAuth callback"""
+    """
+    The function handles the OAuth2 authorization flow with Spotify, retrieves user profile data, stores
+    user information in a database, creates JWT tokens, and redirects to a frontend dashboard with the
+    tokens set as cookies.
+    :return: The callback function returns a response containing JSON data with a success status and a
+    redirect URL to the frontend dashboard. Additionally, it sets two cookies ('access_token' and
+    'refresh_token') with JWT tokens for authentication. The response also includes specific CORS
+    headers to allow cross-origin requests from the frontend application. Finally, it logs a success
+    message indicating that the user has logged in successfully.
+    """
     # Get authorization code
     code = request.args.get('code')
     if not code:
@@ -227,7 +244,14 @@ def callback():
 @app.route('/refresh', methods=['POST'])
 @jwt_required(refresh=True)
 def refresh():
-    """Refresh JWT access token using refresh token"""
+    """
+    The `refresh` function in this Python Flask app refreshes the JWT access token using the refresh
+    token and sets the new access token in a cookie with specified attributes.
+    :return: The `refresh` route in the Flask application is returning a JSON response with a message
+    indicating that the token was refreshed successfully. Additionally, a new access token is set as a
+    cookie named 'access_token' with the specified attributes (httpOnly, secure, sameSite, path,
+    max_age).
+    """
     current_user_id = get_jwt_identity()
     user = db.session.get(User, current_user_id)
     
@@ -275,9 +299,18 @@ def test_cookies():
 
 # User data endpoint
 @app.route('/api/me')
+
 @jwt_required(optional=True)
 def get_user_data():
-    """Get current user data from JWT claims with fallback options"""
+    """
+    The function `get_user_data` retrieves user information by extracting the user ID from a JWT token
+    in various ways, including from the JWT identity, cookies, and Authorization header.
+    :return: The `get_user_data` function returns user data in JSON format. If the user is successfully
+    authenticated and found in the database, the function returns the user's ID, display name, email,
+    admin status, and a boolean indicating whether the user has a Spotify token. If the user is not
+    found or if authentication fails, appropriate error messages are returned along with additional
+    debug information like cookies, headers,
+    """
     # Try to get user from JWT identity first (standard flow)
     current_user_id = get_jwt_identity()
     print(f"JWT Identity: {current_user_id}")  # Debug logging
@@ -365,7 +398,26 @@ def debug_auth():
 
 # Helper function for Spotify API requests with automatic token refresh
 def spotify_api_request(user_id, endpoint, params=None):
-    """Make a request to the Spotify API with automatic token refresh"""
+    """
+    The function `spotify_api_request` handles making API requests to Spotify, including token
+    refreshing and error handling.
+    
+    :param user_id: The `user_id` parameter in the `spotify_api_request` function is used to identify
+    the user for whom the Spotify API request is being made. It is used to retrieve the user's
+    information from the database and manage their access token for making authenticated requests to the
+    Spotify API
+    :param endpoint: The `endpoint` parameter in the `spotify_api_request` function is the specific API
+    endpoint that you want to access in the Spotify API. It represents the resource you are trying to
+    interact with, such as `/me` for user information or `/search` for searching tracks, artists, or
+    albums
+    :param params: The `params` parameter in the `spotify_api_request` function is used to pass any
+    additional parameters that may be required for the Spotify API request. These parameters could
+    include things like query parameters for filtering or sorting data, or any other parameters specific
+    to the endpoint being called
+    :return: The `spotify_api_request` function returns a tuple containing either the response JSON data
+    or `None` (if there was an error) as the first element, and an error message string or `None` as the
+    second element.
+    """
     user = db.session.get(User, user_id)
     if not user:
         return None, "User not found"
@@ -431,7 +483,14 @@ def spotify_api_request(user_id, endpoint, params=None):
 @app.route('/api/user/genres')
 @jwt_required(optional=True)
 def get_user_genres():
-    """Get user's top genres based on their top artists"""
+    """
+    The function `get_user_genres` retrieves the user's top genres based on their top artists from the
+    Spotify API. It handles authentication, token refresh, and CORS headers for frontend access.
+    :return: The `get_user_genres` function returns a JSON response containing the user's top genres
+    and their corresponding weights. If the user is not authenticated or if there are any errors in
+    fetching the data, it returns an error message with appropriate status codes. The response also
+    includes CORS headers to allow cross-origin requests from the frontend application.
+    """
     # Get user ID (use the same fallback logic as /api/me)
     current_user_id = get_jwt_identity()
     
@@ -519,7 +578,13 @@ def get_user_genres():
 @app.route('/api/user/tracks', methods=['GET', 'OPTIONS'])
 @jwt_required(optional=True)
 def get_user_tracks():
-    """Direct Flask route for user's top tracks."""
+    """
+    The function `get_user_tracks` retrieves the top tracks for a user with optional JWT authentication
+    and handles CORS preflight requests.
+    :return: The code snippet defines a Flask route `/api/user/tracks` that handles GET and OPTIONS
+    requests. It first checks if the request method is OPTIONS to handle CORS preflight requests. If the
+    method is OPTIONS, it returns a response with CORS headers.
+    """
     # Handle CORS preflight requests
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
@@ -613,7 +678,14 @@ def get_user_tracks():
 @app.route('/api/user/artists', methods=['GET', 'OPTIONS'])
 @jwt_required(optional=True)
 def get_user_artists():
-    """Direct Flask route for user's top artists."""
+    """
+    This Flask route function retrieves a user's top artists from Spotify API with authentication and
+    CORS handling.
+    :return: The Flask route `/api/user/artists` is returning a response based on the logic within the
+    function `get_user_artists()`. The response includes data about the user's top artists fetched from
+    the Spotify API. The response is a JSON object containing information about the top artists, and it
+    includes CORS headers to allow requests from a specific origin (`http://localhost:3000`).
+    """
     # Handle CORS preflight requests
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
@@ -706,7 +778,13 @@ def get_user_artists():
 @app.route('/api/stats/audio-features', methods=['GET', 'OPTIONS'])
 @jwt_required(optional=True)
 def get_audio_features_avg():
-    """Get average audio features for user's top tracks."""
+    """
+    This function retrieves the average audio features for a user's top tracks from the Spotify API.
+    :return: The endpoint `/api/stats/audio-features` is returning the average audio features for the
+    user's top tracks. The response includes the average values for energy, danceability, valence,
+    acousticness, instrumentalness, liveness, speechiness, tempo, and the total track count. The
+    response is in JSON format and includes CORS headers to allow requests from `http://localhost:3000`.
+    """
     # Handle CORS preflight requests
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
@@ -847,7 +925,14 @@ def get_audio_features_avg():
 @app.route('/api/stats/genres', methods=['GET', 'OPTIONS'])
 @jwt_required(optional=True)
 def get_top_genres():
-    """Get user's top genres based on their top artists."""
+    """
+    The function `get_top_genres` retrieves a user's top genres based on their top artists using Spotify
+    API and handles CORS preflight requests.
+    :return: The endpoint `/api/stats/genres` returns a JSON response containing the top 10 genres based
+    on the user's top artists, along with the top genre among those. The response includes the genres
+    sorted by occurrence count and additional CORS headers for allowing requests from a specific origin
+    (`http://localhost:3000`).
+    """
     # Handle CORS preflight requests
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
@@ -933,7 +1018,15 @@ def get_top_genres():
 @app.route('/api/stats/library', methods=['GET', 'OPTIONS'])
 @jwt_required(optional=True)
 def get_saved_tracks_count():
-    """Get count of user's saved tracks."""
+    """
+    This Flask route function retrieves the count of a user's saved tracks and recently played tracks
+    from the Spotify API while handling CORS preflight requests and JWT token extraction.
+    :return: The endpoint `/api/stats/library` is returning the count of a user's saved tracks and the
+    count of recently played tracks. The response includes JSON data with keys "saved_tracks" for the
+    total saved tracks count and "recently_played" for the count of recently played tracks. CORS headers
+    are also included in the response to allow requests from a specific origin
+    (`http://localhost:3000`).
+    """
     # Handle CORS preflight requests
     if request.method == 'OPTIONS':
         response = jsonify({'status': 'ok'})
@@ -1010,6 +1103,50 @@ def get_saved_tracks_count():
     response.headers.add('Access-Control-Allow-Credentials', 'true')
     response.headers.add('Access-Control-Allow-Methods', 'GET, OPTIONS')
     response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    return response
+@app.route('/api/docs')
+def api_documentation():
+    """
+    Generates API documentation based on route docstrings.
+    Returns a JSON object with endpoint information and descriptions.
+    """
+    docs = []
+    
+    for rule in app.url_map.iter_rules():
+        if rule.endpoint != 'static':  # Skip static files
+            endpoint = rule.endpoint
+            route = str(rule)
+            methods = list(rule.methods - {'OPTIONS', 'HEAD'})
+            
+            # Get the function from the endpoint
+            view_func = app.view_functions.get(endpoint)
+            description = view_func.__doc__ if view_func and view_func.__doc__ else "No description available"
+            
+            # Clean up the description
+            if description:
+                description = description.strip()
+            
+            # Add to documentation list
+            docs.append({
+                'endpoint': endpoint,
+                'route': route,
+                'methods': methods,
+                'description': description
+            })
+    
+    # Sort by route for easier reading
+    docs = sorted(docs, key=lambda x: x['route'])
+    
+    # Add CORS headers
+    response = jsonify({
+        "api_name": "MusicTracker API",
+        "version": "1.0",
+        "documentation": docs
+    })
+    
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:3000')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    
     return response
 @app.teardown_appcontext
 def shutdown_session(exception=None):
