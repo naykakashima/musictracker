@@ -1,23 +1,67 @@
-"use client"; 
+"use client";
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+
 export default function Home() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const handleLogin = () => {
-    // Redirect to your Flask backend's /login endpoint
-    window.location.replace('http://localhost:5000/login');
+    window.location.href = 'http://localhost:5000/login';
   };
+
   useEffect(() => {
-    // Extract token from URL fragment
-    const hash = window.location.hash.substring(1)
-    const params = new URLSearchParams(hash)
-    const token = params.get('token')
-  
-    if (token) {
-      sessionStorage.setItem('access_token', token)
-      window.history.replaceState(null, '', '/dashboard')
+    // Check if we're returning from the callback
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get('code');
+    
+    if (code) {
+      setLoading(true);
+      
+      // Call our backend with the code
+      fetch(`http://localhost:5000/callback${window.location.search}`, {
+        method: 'GET',
+        credentials: 'include', // Important for cookies
+      })
+        .then(response => {
+          // Check if the response is JSON
+          const contentType = response.headers.get("content-type");
+          if (contentType && contentType.includes("application/json")) {
+            return response.json().then(data => {
+              if (data.status === "success" && data.redirect_url) {
+                // Clear URL parameters
+                window.history.replaceState({}, document.title, '/');
+                
+                // Redirect to the dashboard
+                window.location.href = data.redirect_url;
+              } else {
+                setError("Authentication failed");
+                setLoading(false);
+              }
+            });
+          } else {
+            // Handle case where response might not be JSON
+            setError("Unexpected response format");
+            setLoading(false);
+          }
+        })
+        .catch(err => {
+          setError("Error during authentication");
+          console.error(err);
+          setLoading(false);
+        });
     }
-  }, [])
+  }, []);
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Authenticating with Spotify...</p>
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -26,7 +70,7 @@ export default function Home() {
       className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100"
     >
       <div className="container mx-auto px-4 py-20 text-center">
-        <motion.h1 
+        <motion.h1
           className="text-6xl font-bold text-gray-900 mb-4"
           initial={{ y: -20 }}
           animate={{ y: 0 }}
@@ -36,13 +80,21 @@ export default function Home() {
         <p className="text-xl text-gray-600 mb-8">
           Discover your listening habits with Spotify
         </p>
+        
+        {error && (
+          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+            {error}
+          </div>
+        )}
+        
         <motion.div
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
-          <Button 
+          <Button
             onClick={handleLogin}
             className="px-8 py-6 text-lg bg-green-600 hover:bg-green-700"
+            disabled={loading}
           >
             Login with Spotify
           </Button>
