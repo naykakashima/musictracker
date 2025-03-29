@@ -1,15 +1,15 @@
 import os
 import requests
 import time
-from flask import Flask, request, redirect, jsonify, url_for
-from flask_restful import Api, Resource
+from flask import Flask, request, redirect, jsonify
+from flask_restful import Api
 from flask_jwt_extended import JWTManager, create_access_token, create_refresh_token, get_jwt_identity, jwt_required
 from collections import Counter
 from dotenv import load_dotenv
 from urllib.parse import urlencode
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from datetime import timedelta, datetime, timezone
+from datetime import timedelta
 import secrets
 
 # Load environment variables
